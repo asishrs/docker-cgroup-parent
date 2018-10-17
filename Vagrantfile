@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   #Install Docker using the get-docker.sh script.
   config.vm.provision "shell",
-      inline: "/bin/sh /vagrant/get-docker.sh"
+      inline: "/bin/sh /vagrant/scripts/get-docker.sh"
 
   config.vm.provision "shell", inline: <<-SHELL
     #Install htop
@@ -21,8 +21,9 @@ Vagrant.configure("2") do |config|
     rpm -ihv epel-release-7-11.noarch.rpm
     yum install -y htop
 
-    #Start Docker
-    systemctl start docker
+    #Install docker-compose
+    curl -L "https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
 
     #Intall cgroup tools
     yum install -y libcgroup
@@ -42,9 +43,15 @@ Vagrant.configure("2") do |config|
     #This is similar passing --memory at the docker start but applying at cgroup-parent will apply for all containers on the host.
     #Example - docker run -it --rm --memory=100m image-name
     echo 104857600 > /sys/fs/cgroup/memory/cgroup-limit/memory.limit_in_bytes
+
+    #Start a swarm as we are using a docker stack
+    docker swarm init
+
+    #Start Docker
+    systemctl start docker
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
-    docker build -t asishrs/alpine-stress /vagrant
+    docker build -t asishrs/alpine-stress /vagrant/docker
   SHELL
 end
